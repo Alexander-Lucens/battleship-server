@@ -1,9 +1,10 @@
-import * as http from 'node:http';
-import { WebSocketServer, WebSocket } from 'ws';
-import { IncomingMessage } from '../types/index.js';
-import { handleMessage } from './messagehandler.js';
-import { removeUserFromRooms } from '../db/index.js';
-import { broadcastAvalibleRooms } from './broadcaster.js';
+import type * as http from 'node:http';
+import type { WebSocket } from 'ws';
+import { WebSocketServer } from 'ws';
+import type { IncomingMessage } from '../types/index';
+import { handleMessage } from './messageHandler';
+import { removeUserFromRooms } from '../db/index';
+import { broadcastAvalibleRooms } from './broadcaster';
 
 
 export const initWebSocketServer = (server: http.Server) => {
@@ -23,7 +24,7 @@ export const initWebSocketServer = (server: http.Server) => {
 
 				handleMessage(wss, ws, parsedMessage);
 			} catch (err) {
-				console.error(`Failed to parse message or invalid format of -> ${message}`);
+				console.error(`Failed to parse message or invalid format.`, err);
 			}
 		});
 

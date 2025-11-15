@@ -1,6 +1,6 @@
-import { WebSocketServer } from "ws";
-import { WebSocketContexted, ResponseMessage } from "../types/index.js";
-import { getAvalibleRooms, getWinners } from "../db/index.js";
+import type { WebSocketServer } from "ws";
+import type { WebSocketContexted, ResponseMessage } from "../types/index";
+import { getAvalibleRooms, getWinners } from "../db/index";
 
 
 export const sendResponse = (ws: WebSocketContexted, type: string, data: unknown) => {

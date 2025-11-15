@@ -1,8 +1,9 @@
-import { WebSocketContexted, ResponseMessage } from "../../types/index.js";
-import { findUserByName, createUser } from "../../db/index.js";
-import { verifyPassword } from "../../utils/encription.js";
-import { WebSocketServer } from "ws";
-import { sendResponse, broadcastAvalibleRooms, broadcastWinners } from "../broadcaster.js";
+import type { WebSocketContexted} from "../../types/index";
+// import { ResponseMessage } from "../../types/index";
+import { findUserByName, createUser } from "../../db/index";
+import { verifyPassword } from "../../utils/encription";
+import type { WebSocketServer } from "ws";
+import { sendResponse, broadcastAvalibleRooms, broadcastWinners } from "../broadcaster";
 
 export const handleRegistration = (wss: WebSocketServer, ws: WebSocketContexted, data: string) => {
 	let resData;

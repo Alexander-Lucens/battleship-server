@@ -1,12 +1,12 @@
-import {
+import type {
 	User,
 	RoomUser,
 	Room,
 	ClientRoom,
 	Winner,
 	WebSocketContexted
-} from "../types/index.js";
-import { hashPassword } from "../utils/encription.js";
+} from "../types/index";
+import { hashPassword } from "../utils/encription";
 
 /* USERS DB ************************************************************/
 

@@ -1,7 +1,7 @@
-import { WebSocketContexted, IncomingMessage } from "../types/index.js";
-import { WebSocketServer } from "ws";
-import { handleRegistration } from "./handlers/regHandler.js";
-import { handleCreateRoom } from "./handlers/roomHandler.js";
+import type { WebSocketContexted, IncomingMessage } from "../types/index";
+import type { WebSocketServer } from "ws";
+import { handleRegistration } from "./handlers/regHandler";
+import { handleCreateRoom } from "./handlers/roomHandler";
 
 
 export const handleMessage = (wss: WebSocketServer, ws: WebSocketContexted, message: IncomingMessage) => {

@@ -1,7 +1,8 @@
-import { WebSocketServer } from "ws";
-import { WebSocketContexted, ResponseMessage } from "../../types/index.js";
-import { findUserByIndex, createRoom } from "../../db/index.js";
-import { broadcastAvalibleRooms, sendResponse } from "../broadcaster.js";
+import type { WebSocketServer } from "ws";
+import type { WebSocketContexted} from "../../types/index";
+// import { ResponseMessage } from "../../types/index";
+import { findUserByIndex, createRoom } from "../../db/index";
+import { broadcastAvalibleRooms, sendResponse } from "../broadcaster";
 
 
 export const handleCreateRoom = (wss: WebSocketServer, ws: WebSocketContexted) => {
