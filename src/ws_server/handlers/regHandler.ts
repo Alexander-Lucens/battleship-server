@@ -10,7 +10,7 @@ export const handleRegistration = (wss: WebSocketServer, ws: WebSocketContexted,
 	let isSuccessfulRegister = false;
 	try {
 		const { name, password } = JSON.parse(data);
-		if (!name || !password) throw new Error('Name and password required');
+		if (!name || !password) throw new Error('name and password required');
 		let user = findUserByName(name);
 		if (user) {
 			const isVerified = verifyPassword(password, user.passwordHash, user.salt);
@@ -25,7 +25,7 @@ export const handleRegistration = (wss: WebSocketServer, ws: WebSocketContexted,
 				isSuccessfulRegister = true;
 			} else {
 				resData = {
-					name,
+					name: name,
 					index: -1,
 					error: true,
 					errorText: "Invalid user data"

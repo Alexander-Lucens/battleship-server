@@ -1,7 +1,7 @@
 import { httpServer } from "./http_server/index";
 import { initWebSocketServer } from './ws_server/index';
 
-const HTTP_PORT = 8181;
+const HTTP_PORT = 3000;
 
 console.log(`Static http server starts on the ${HTTP_PORT} port.`);
 httpServer.listen(HTTP_PORT);
