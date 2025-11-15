@@ -40,7 +40,7 @@ export interface ClientRoomUser {
 	index: number;
 }
 
-export interface clientRoom {
+export interface ClientRoom {
 	roomId: string;
 	roomUsers: ClientRoomUser[];
 }

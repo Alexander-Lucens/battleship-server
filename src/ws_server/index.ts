@@ -1,6 +1,9 @@
 import * as http from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { IncomingMessage } from '../types/index.js';
+import { handleMessage } from './messagehandler.js';
+import { removeUserFromRooms } from '../db/index.js';
+import { broadcastAvalibleRooms } from './broadcaster.js';
 
 
 export const initWebSocketServer = (server: http.Server) => {
@@ -18,7 +21,7 @@ export const initWebSocketServer = (server: http.Server) => {
 				// Before prod check
 				console.log(`Recieved message type: ${parsedMessage.type}`);
 
-				// Handle that sheat later in separate module
+				handleMessage(wss, ws, parsedMessage);
 			} catch (err) {
 				console.error(`Failed to parse message or invalid format of -> ${message}`);
 			}
@@ -29,9 +32,8 @@ export const initWebSocketServer = (server: http.Server) => {
 		 */
 		ws.on('close', () => {
 			console.log(`Player disconected`);
-			// Delete from room or put in pool of deleted,
-			// but i think for buttleships game its not required.
-			// may be just make a timer of 15 sec for re-conection 
+			removeUserFromRooms(ws);
+			broadcastAvalibleRooms(wss); 
 		});
 
 		/**
