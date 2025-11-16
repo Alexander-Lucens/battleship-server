@@ -2,7 +2,7 @@ import type { WebSocketContexted, IncomingMessage } from "../types/index";
 import type { WebSocketServer } from "ws";
 import { handleRegistration } from "./handlers/regHandler";
 import { handleCreateRoom, handleJoinRoom } from "./handlers/roomHandler";
-import { handleAddShips, handleAttack } from "./handlers/gameHandler";
+import { handleAddShips, handleAttack, handleRandomAttack } from "./handlers/gameHandler";
 import { handleSinglePlay } from "./handlers/botHandler";
 
 
@@ -28,6 +28,10 @@ export const handleMessage = (wss: WebSocketServer, ws: WebSocketContexted, mess
 		
 		case 'attack':
 			handleAttack(wss, ws, message.data);
+			break;
+
+		case 'randomAttack':
+			handleRandomAttack(wss, ws, message.data);
 			break;
 
 

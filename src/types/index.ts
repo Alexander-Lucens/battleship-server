@@ -8,6 +8,7 @@ export const BOT_NAME = [
 	"Sir J.R.R. Tolkien",
 	"Boring Bot"
 ][Math.floor(Math.random() * 3)];
+
 /*******************************************************************/
 
 export interface User {
@@ -94,5 +95,12 @@ export interface AttackPayload {
 	gameId: string | number;
 	x: number;
 	y: number;
+	indexPlayer: number;
+}
+
+/** Random ***********************************************************/
+
+export interface RandomAttackPayload {
+	gameId: string | number;
 	indexPlayer: number;
 }

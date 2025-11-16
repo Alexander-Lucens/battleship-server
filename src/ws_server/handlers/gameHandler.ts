@@ -6,7 +6,6 @@ import {
 	areBothPlayerReady,
 	switchTurn,
 	updateWinner,
-	// findUserByIndex
 } from "../../db/index";
 import type {
 	WebSocketContexted,
@@ -149,7 +148,7 @@ export const handleAttack = (wss: WebSocketServer, ws: WebSocketContexted, data:
 				}
 			}
 			if (checkWinner(opponentBoard)) {
-				console.log(`Player ${indexPlayer} won game ${gameId}`);
+				console.log(`Player ${room.roomUsers[indexPlayer].name} won game ${gameId}`);
 				sendToRoom(room, 'finish', { winPlayer: indexPlayer });
 				const winnerUser = room.roomUsers.find(u => u.index === indexPlayer);
 				if (winnerUser) {
@@ -170,9 +169,15 @@ export const handleAttack = (wss: WebSocketServer, ws: WebSocketContexted, data:
 			nextPlayer = switchTurn(room);
 		}
 		sendToRoom(room, 'turn', { currentPlayer: nextPlayer });
+		
 		if (nextPlayer === BOT_USER_INDEX) {
 			setTimeout(() => {
-				triggerBotAttack(wss, room);
+				try {
+					console.log(`[${BOT_NAME}] Run attack ${room.roomId}`);
+					triggerBotAttack(wss, room);
+				} catch (error) {
+					console.error(`[${BOT_NAME}] CRITICAL ERROR in triggerBotAttack:`, error);
+				}
 			}, 500);
 		}
 
@@ -186,7 +191,6 @@ export const handleAttack = (wss: WebSocketServer, ws: WebSocketContexted, data:
 };
 
 export const handleAddShips = (wss: WebSocketServer, ws: WebSocketContexted, data: string) => {
-
 	try {
 		const { gameId, ships, indexPlayer } = JSON.parse(data) as AddShipsPayload;
 		if (ws.userIndex !== indexPlayer) {
@@ -197,6 +201,7 @@ export const handleAddShips = (wss: WebSocketServer, ws: WebSocketContexted, dat
 			throw new Error('Room not found or game not initialized');
 		}
 		console.log(`Player ${indexPlayer} in room ${gameId} added ${ships.length} ships.`);
+
 		if (areBothPlayerReady(room)) {
 			console.log(`Game ${gameId} is starting now!`);
 			room.roomUsers.forEach((user, index) => {
@@ -211,19 +216,29 @@ export const handleAddShips = (wss: WebSocketServer, ws: WebSocketContexted, dat
 			sendToRoom(room, 'turn', {
 				currentPlayer: room.currentPlayerIndex,
 			});
+			if (room.currentPlayerIndex === BOT_USER_INDEX) {
+				setTimeout(() => {
+					try {
+						console.log(`[${BOT_NAME}] Starts attack in ${room.roomId}`);
+						triggerBotAttack(wss, room);
+					} catch (error) {
+						console.error(`[${BOT_NAME}] CRITICAL ERROR IN triggerBotAttack:`, error);
+					}
+				}, 500);
+			}
 		}
 	} catch (error) {
 		console.error('AddShips error: ', error);
 		sendResponse(ws, 'error', {
 			error: true,
-			errorText: (error as Error).message || 'Failed to add ships'
+			errorText: (error as Error).message || 'Failed to add ships',
 		});
 	}
 };
 
 const triggerBotAttack = (wss: WebSocketServer, room: Room) => {
 	let botTurn = true;
-	do {
+	while (botTurn) {
 		const playerRoomUser = room.roomUsers.find(u => u.index !== BOT_USER_INDEX);
 		if (!playerRoomUser) return;
 		
@@ -266,7 +281,7 @@ const triggerBotAttack = (wss: WebSocketServer, room: Room) => {
 				});
 				sendPrimaryAttack = false;
 				if (checkWinner(playerBoard)) {
-					console.log(`Bot won game ${room.roomId}`);
+					console.log(`[Bot] ${BOT_NAME} won game ${room.roomId}`);
 					sendToRoom(room, 'finish', { winPlayer: BOT_USER_INDEX });
 					updateWinner(BOT_NAME);
 					broadcastWinners(wss);
@@ -290,5 +305,32 @@ const triggerBotAttack = (wss: WebSocketServer, room: Room) => {
 			botTurn = false;
 		}		
 		sendToRoom(room, 'turn', { currentPlayer: room.currentPlayerIndex });
-	} while (botTurn);
+	}
 };
+
+export const handleRandomAttack = (wss: WebSocketServer, ws: WebSocketContexted, data: string) => {
+	try {
+		const { gameId, indexPlayer } = JSON.parse(data);
+		if (ws.userIndex !== indexPlayer) throw new Error("Player index mismatch");
+		const room = getRoomById(String(gameId));
+		if (!room || !room.gameBoards || !room.ships) throw new Error("Game not found or not initialised");
+
+		if (room.currentPlayerIndex !== indexPlayer) {
+			console.warn(`Player ${indexPlayer} attacked out of turn (random).`);
+			return ;
+		}
+		const opponentRoomIndex = room.roomUsers.findIndex(u => u.index !== indexPlayer);
+		if (opponentRoomIndex === -1) throw new Error('Opponent not found');
+		const opponentBoard = room.gameBoards[opponentRoomIndex];
+		const [x, y] = makeBotAttack(opponentBoard);
+		console.log(`Player ${indexPlayer} random attack at [${x}, ${y}]`);
+		const attackPayload: AttackPayload = { gameId, x, y, indexPlayer };
+		handleAttack(wss, ws, JSON.stringify(attackPayload));
+	} catch (error) {
+		console.error('Random Attack error:', error);
+		sendResponse(ws, 'error', {
+			error: true,
+			errorText: (error as Error).message || 'Failed to random attack',
+		});
+	}
+}

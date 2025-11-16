@@ -86,6 +86,8 @@ export const getRoomById = (roomId: string): Room | undefined => {
 export const addUserToRoom = (roomId: string, user: RoomUser): Room | undefined => {
 	const room = roomsDB.get(roomId);
 	if (room && room.roomUsers.length < 2) {
+		if (room.roomUsers[0].index === user.index) return undefined;
+		
 		room.roomUsers.push(user);
 
 		if (room.roomUsers.length === 2) {

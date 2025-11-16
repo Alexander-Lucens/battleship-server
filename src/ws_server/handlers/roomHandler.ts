@@ -35,6 +35,7 @@ export const handleJoinRoom = (wss: WebSocketServer, ws: WebSocketContexted, dat
 		sendResponse(ws, 'error', { error: true, errorText: 'User not found' });
 		return ;
 	}
+	
 	let roomId: string;
 	try {
 		const { indexRoom } = JSON.parse(data);
