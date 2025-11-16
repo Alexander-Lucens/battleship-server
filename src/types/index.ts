@@ -1,5 +1,15 @@
 import type { WebSocket } from "ws";
 
+/** BOOT ***********************************************************/
+
+export const BOT_USER_INDEX = -1; 
+export const BOT_NAME = [
+	"Marvin",
+	"Sir J.R.R. Tolkien",
+	"Boring Bot"
+][Math.floor(Math.random() * 3)];
+/*******************************************************************/
+
 export interface User {
 	name: string;
 	passwordHash: string;
@@ -29,7 +39,7 @@ export interface ResponseMessage {
 export interface RoomUser {
 	name: string;
 	index: number;
-	ws: WebSocketContexted;
+	ws: WebSocketContexted | null;
 }
 
 export interface Room {
@@ -65,7 +75,7 @@ export interface Ship {
 	position: { x: number; y: number };
 	direction: boolean;
 	length: number;
-	type: "small" | "medium" | "large" | "huge";
+	type: 'small' | 'medium' | 'large' | 'huge';
 }
 
 export type GameBoard = number[][];

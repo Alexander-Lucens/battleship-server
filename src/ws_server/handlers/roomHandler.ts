@@ -59,15 +59,19 @@ export const handleJoinRoom = (wss: WebSocketServer, ws: WebSocketContexted, dat
 	}
 	console.log(`Game created: ${room.roomId}. Players: ${room.roomUsers.map((u) => u.name).join(', ')}`);
 	
-	sendResponse(room.roomUsers[0].ws, 'create_game', {
-		idGame: room.roomId,
-		idPlayer: room.roomUsers[0].index,
-	});
+	if (room.roomUsers[0].ws) {
+		sendResponse(room.roomUsers[0].ws, 'create_game', {
+			idGame: room.roomId,
+			idPlayer: room.roomUsers[0].index,
+		});
+	}
 
-	sendResponse(room.roomUsers[1].ws, 'create_game', {
-		idGame: room.roomId,
-		idPlayer: room.roomUsers[1].index,
-	});
+	if (room.roomUsers[1].ws) {
+		sendResponse(room.roomUsers[1].ws, 'create_game', {
+			idGame: room.roomId,
+			idPlayer: room.roomUsers[1].index,
+		});
+	}
 
 	broadcastAvalibleRooms(wss);
 };

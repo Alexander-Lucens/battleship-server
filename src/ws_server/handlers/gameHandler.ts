@@ -1,11 +1,13 @@
 import type { WebSocketServer } from "ws";
-import { sendResponse } from "../broadcaster";
+import { broadcastWinners, sendResponse } from "../broadcaster";
 import {
 	getRoomById,
 	setPlayerShips,
 	areBothPlayerReady,
-	switchTurn
-} from "../../db";
+	switchTurn,
+	updateWinner,
+	// findUserByIndex
+} from "../../db/index";
 import type {
 	WebSocketContexted,
 	AddShipsPayload,
@@ -15,12 +17,14 @@ import type {
 	AttackStatus,
 	GameBoard,
 	Ship
-} from "src/types";
+} from "../../types/index";
+import { BOT_USER_INDEX, BOT_NAME } from "../../types/index";
+import { makeBotAttack } from "../../utils/botUtils";
 
 const sendToRoom = (room: Room, type: string, data: unknown) => {
 	const message = JSON.stringify({ type, data: JSON.stringify(data), id: 0 });
 	room.roomUsers.forEach((user: RoomUser) => {
-		if (user.ws.readyState === user.ws.OPEN) {
+		if (user.ws && user.ws.readyState === user.ws.OPEN) {
 			user.ws.send(message);
 		}
 	});
@@ -43,10 +47,61 @@ const isKilled = (board: GameBoard, ships: Ship[], x: number, y: number): boolea
 	const hitShip = findShipAt(ships, x, y);
 	if (!hitShip) return false;
 	for (let i = 0; i < hitShip.length; i++) {
-		const shipX = hitShip.direction ? hitShip.position.x : hitShip.position.x + 1;
-		const shipY = hitShip.direction ? hitShip.position.y + 1 : hitShip.position.y;
+		const shipX = hitShip.direction ? hitShip.position.x : hitShip.position.x + i;
+		const shipY = hitShip.direction ? hitShip.position.y + i : hitShip.position.y;
 		if (board[shipY][shipX] !== 3) {
 			return false;
+		}
+	}
+	return true;
+};
+
+const surroundingCells = [
+	{ dx: -1, dy: -1 },
+	{ dx: 0, dy: -1 },
+	{ dx: 1, dy: -1 },
+	{ dx: -1, dy: 0 },
+	{ dx: 1, dy: 0 },
+	{ dx: -1, dy: 1 },
+	{ dx: 0, dy: 1 },
+	{ dx: 1, dy: 1 },
+];
+
+const fillMissAround = (board: GameBoard, ships: Ship[], x: number, y: number)
+	: Array<{ x: number; y: number }> => {
+	const hitShip = findShipAt(ships, x, y);
+	if (!hitShip) return [];
+	const missCells: Array<{ x: number; y: number }> = [];
+	const addedCells = new Set<string>();
+	for (let i = 0; i < hitShip.length; i++) {
+		const shipX = hitShip.direction ? hitShip.position.x : hitShip.position.x + i;
+		const shipY = hitShip.direction ? hitShip.position.y + i : hitShip.position.y;
+
+		for (const cell of surroundingCells) {
+			const checkX = shipX + cell.dx;
+			const checkY = shipY + cell.dy;
+			const cellKey = `${checkX}:${checkY}`;
+			if (
+				checkX >= 0 &&
+				checkX < 10 &&
+				checkY >= 0 &&
+				checkY < 10 &&
+				board[checkY][checkX] === 0 &&
+				!addedCells.has(cellKey)
+			) {
+				board[checkY][checkX] = 2;
+				missCells.push({ x: checkX, y: checkY });
+				addedCells.add(cellKey);
+			}
+		}
+	}
+	return missCells;
+};
+
+const checkWinner = (opponentBoard: GameBoard): boolean => {
+	for (let y = 0; y < 10; y++) {
+		for (let x = 0; x < 10; x++) {
+			if (opponentBoard[y][x] === 1) return false;
 		}
 	}
 	return true;
@@ -83,27 +138,44 @@ export const handleAttack = (wss: WebSocketServer, ws: WebSocketContexted, data:
 			opponentBoard[y][x] = 3;
 			isTurnSwitch = false;
 			status = isKilled(opponentBoard, opponentShips, x, y) ? 'killed' : 'shot';
-		} else if (cellState === 2 || cellState === 3) {
-			status = "miss";
-			isTurnSwitch = true;
+			if (status === 'killed') {
+				const missCells = fillMissAround(opponentBoard, opponentShips, x, y);
+				for (const miss of missCells) {
+					sendToRoom(room, 'attack', {
+						position: miss,
+						currentPlayer: indexPlayer,
+						status: 'miss',
+					});
+				}
+			}
+			if (checkWinner(opponentBoard)) {
+				console.log(`Player ${indexPlayer} won game ${gameId}`);
+				sendToRoom(room, 'finish', { winPlayer: indexPlayer });
+				const winnerUser = room.roomUsers.find(u => u.index === indexPlayer);
+				if (winnerUser) {
+					updateWinner(winnerUser.name);
+				}
+				broadcastWinners(wss);
+				return ;
+			}
 		}
-
-		const  attackResponseData = {
+		sendToRoom(room, 'attack', {
 			position: {x, y},
 			currentPlayer: indexPlayer,
 			status: status,
-		};
-		sendToRoom(room, 'attack', attackResponseData);
+		});
 
 		let nextPlayer = indexPlayer;
 		if (isTurnSwitch) {
 			nextPlayer = switchTurn(room);
 		}
-
 		sendToRoom(room, 'turn', { currentPlayer: nextPlayer });
-	
-		// Should be allso 1. Is all ships `killed` -> finish
-		// maybe send `miss` around `killed` ship
+		if (nextPlayer === BOT_USER_INDEX) {
+			setTimeout(() => {
+				triggerBotAttack(wss, room);
+			}, 500);
+		}
+
 	} catch (error) {
 		console.error('Attack error:', error);
 		sendResponse(ws, 'error', { 
@@ -128,10 +200,12 @@ export const handleAddShips = (wss: WebSocketServer, ws: WebSocketContexted, dat
 		if (areBothPlayerReady(room)) {
 			console.log(`Game ${gameId} is starting now!`);
 			room.roomUsers.forEach((user, index) => {
-				sendResponse(user.ws, 'start_game', {
-					ships: room.ships![index],
-					currentPlayerIndex: user.index,
-				});
+				if (user.ws) {
+					sendResponse(user.ws, 'start_game', {
+						ships: room.ships![index],
+						currentPlayerIndex: user.index,
+					});
+				}
 			});
 			
 			sendToRoom(room, 'turn', {
@@ -145,4 +219,76 @@ export const handleAddShips = (wss: WebSocketServer, ws: WebSocketContexted, dat
 			errorText: (error as Error).message || 'Failed to add ships'
 		});
 	}
+};
+
+const triggerBotAttack = (wss: WebSocketServer, room: Room) => {
+	let botTurn = true;
+	do {
+		const playerRoomUser = room.roomUsers.find(u => u.index !== BOT_USER_INDEX);
+		if (!playerRoomUser) return;
+		
+		const playerRoomIndex = room.roomUsers.findIndex(u => u.index === playerRoomUser.index);
+		const playerBoard = room.gameBoards![playerRoomIndex];
+		const playerShips = room.ships![playerRoomIndex];
+
+		const [x, y] = makeBotAttack(playerBoard);
+
+		const cellState = playerBoard[y][x];
+		let status: AttackStatus = 'miss';
+		let isTurnSwitch = true;
+		let sendPrimaryAttack = true;
+
+		if (cellState === 0) {
+			playerBoard[y][x] = 2;
+			status = 'miss';
+			isTurnSwitch = true;
+		} else if (cellState === 1) {
+			playerBoard[y][x] = 3;
+			status = 'shot';
+			isTurnSwitch = false;
+
+			if (isKilled(playerBoard, playerShips, x, y)) {
+				status = 'killed';
+				
+				sendToRoom(room, 'attack', {
+					position: { x, y },
+					currentPlayer: BOT_USER_INDEX,
+					status: 'killed',
+				});
+
+				const missCells = fillMissAround(playerBoard, playerShips, x, y);
+				missCells.forEach(miss => {
+					sendToRoom(room, 'attack', {
+						position: miss,
+						currentPlayer: BOT_USER_INDEX,
+						status: 'miss',
+					});
+				});
+				sendPrimaryAttack = false;
+				if (checkWinner(playerBoard)) {
+					console.log(`Bot won game ${room.roomId}`);
+					sendToRoom(room, 'finish', { winPlayer: BOT_USER_INDEX });
+					updateWinner(BOT_NAME);
+					broadcastWinners(wss);
+					return;
+				}
+			}
+		} else if (cellState === 2 || cellState === 3) {
+			status = 'miss';
+			isTurnSwitch = true;
+		}
+
+		if (sendPrimaryAttack) {
+			sendToRoom(room, 'attack', {
+				position: { x, y },
+				currentPlayer: BOT_USER_INDEX,
+				status: status,
+			});
+		}
+		if (isTurnSwitch) {
+			switchTurn(room);
+			botTurn = false;
+		}		
+		sendToRoom(room, 'turn', { currentPlayer: room.currentPlayerIndex });
+	} while (botTurn);
 };

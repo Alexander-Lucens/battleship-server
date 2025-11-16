@@ -3,6 +3,7 @@ import type { WebSocketServer } from "ws";
 import { handleRegistration } from "./handlers/regHandler";
 import { handleCreateRoom, handleJoinRoom } from "./handlers/roomHandler";
 import { handleAddShips, handleAttack } from "./handlers/gameHandler";
+import { handleSinglePlay } from "./handlers/botHandler";
 
 
 export const handleMessage = (wss: WebSocketServer, ws: WebSocketContexted, message: IncomingMessage) => {
@@ -31,8 +32,7 @@ export const handleMessage = (wss: WebSocketServer, ws: WebSocketContexted, mess
 
 
 		case 'single_play':
-			console.log(`SINGLE PLAYER MODE IS NOT IMPLEMENTED!`);
-			// handleSinglePlay(wss, ws, massage.data);
+			handleSinglePlay(wss, ws);
 			break;
 
 		default:

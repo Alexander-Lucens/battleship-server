@@ -42,7 +42,7 @@ export const findUserByIndex = (index: number): User | undefined => {
 
 /* HELPERS (empty Board) ***********************************************/
 
-const createEmptyBoard = (): GameBoard => {
+export const createEmptyBoard = (): GameBoard => {
 	return (Array(10).fill(null).map(() => Array(10).fill(0)));
 };
 /* ********************************************************************/
