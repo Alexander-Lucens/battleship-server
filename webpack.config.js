@@ -1,7 +1,7 @@
-import { resolve } from 'path';
+import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
-const __dirname = fileURLToPath(import.meta.url);
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default {
   entry: './src/index.ts',
@@ -22,5 +22,9 @@ export default {
   output: {
     filename: 'index.js',
     path: resolve(__dirname, 'dist'),
+  },
+  externals: {
+    'bufferutil': 'bufferutil',
+    'utf-8-validate': 'utf-8-validate',
   },
 };
