@@ -17,11 +17,14 @@ export interface IncomingMessage {
 	id: number;
 }
 
+
 export interface ResponseMessage {
 	type: string;
 	data: string;
 	id: number;
 }
+
+/** ROOM ***********************************************************/
 
 export interface RoomUser {
 	name: string;
@@ -32,7 +35,9 @@ export interface RoomUser {
 export interface Room {
 	roomId: string;
 	roomUsers: RoomUser[];
-	// Maybe there is nice place to store game state conditions
+	gameBoards?: [GameBoard, GameBoard];
+	ships?: [Ship[], Ship[]];
+	currentPlayerIndex?: number;
 }
 
 export interface ClientRoomUser {
@@ -48,4 +53,36 @@ export interface ClientRoom {
 export interface Winner {
 	name: string;
 	wins: number;
+}
+
+/** SHIP ***********************************************************/
+
+/**
+ * @position pos at x and y
+ * @direction `true`= vertical orientation `false` = horisontal  
+ */
+export interface Ship {
+	position: { x: number; y: number };
+	direction: boolean;
+	length: number;
+	type: "small" | "medium" | "large" | "huge";
+}
+
+export type GameBoard = number[][];
+
+export interface AddShipsPayload {
+	gameId: string | number;
+	ships: Ship[];
+	indexPlayer: number;
+}
+
+/** ATTACK ***********************************************************/
+
+export type AttackStatus = "miss" | "killed" | "shot";
+
+export interface AttackPayload {
+	gameId: string | number;
+	x: number;
+	y: number;
+	indexPlayer: number;
 }
