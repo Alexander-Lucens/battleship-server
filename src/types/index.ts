@@ -1,0 +1,106 @@
+import type { WebSocket } from "ws";
+
+/** BOOT ***********************************************************/
+
+export const BOT_USER_INDEX = -1; 
+export const BOT_NAME = [
+	"Marvin",
+	"Sir J.R.R. Tolkien",
+	"Boring Bot"
+][Math.floor(Math.random() * 3)];
+
+/*******************************************************************/
+
+export interface User {
+	name: string;
+	passwordHash: string;
+	salt: string;
+	index: number;
+}
+
+export interface WebSocketContexted extends WebSocket {
+	userIndex?: number;
+}
+
+export interface IncomingMessage {
+	type: string;
+	data: string;
+	id: number;
+}
+
+
+export interface ResponseMessage {
+	type: string;
+	data: string;
+	id: number;
+}
+
+/** ROOM ***********************************************************/
+
+export interface RoomUser {
+	name: string;
+	index: number;
+	ws: WebSocketContexted | null;
+}
+
+export interface Room {
+	roomId: string;
+	roomUsers: RoomUser[];
+	gameBoards?: [GameBoard, GameBoard];
+	ships?: [Ship[], Ship[]];
+	currentPlayerIndex?: number;
+}
+
+export interface ClientRoomUser {
+	name: string;
+	index: number;
+}
+
+export interface ClientRoom {
+	roomId: string;
+	roomUsers: ClientRoomUser[];
+}
+
+export interface Winner {
+	name: string;
+	wins: number;
+}
+
+/** SHIP ***********************************************************/
+
+/**
+ * @position pos at x and y
+ * @direction `true`= vertical orientation `false` = horisontal  
+ */
+export interface Ship {
+	position: { x: number; y: number };
+	direction: boolean;
+	length: number;
+	type: 'small' | 'medium' | 'large' | 'huge';
+}
+
+export type GameBoard = number[][];
+
+export interface AddShipsPayload {
+	gameId: string | number;
+	ships: Ship[];
+	indexPlayer: number;
+}
+
+/** ATTACK ***********************************************************/
+
+export type AttackStatus = "miss" | "killed" | "shot";
+
+export interface AttackPayload {
+	gameId: string | number;
+	x: number;
+	y: number;
+	indexPlayer: number;
+}
+
+/** Random ***********************************************************/
+
+export interface RandomAttackPayload {
+	gameId: string | number;
+	indexPlayer: number;
+}
